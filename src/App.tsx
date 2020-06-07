@@ -1,12 +1,13 @@
-import React from 'react';
-import './App.css';
+import React from 'react'
 
-function App() {
+import Router from './Router'
+
+import './App.css'
+
+const App: React.FC = () => {
   return (
-    <div className="App">
-      Hello World
-    </div>
-  );
+    <Router />
+  )
 }
 
-export default App;
+export default App 
