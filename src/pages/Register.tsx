@@ -1,5 +1,5 @@
-import React, { useState, useEffect, ChangeEvent } from 'react'
-import { Link } from 'react-router-dom'
+import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react'
+import { Link, useHistory } from 'react-router-dom'
 import axios from 'axios'
 import { Map, TileLayer, Marker } from 'react-leaflet'
 import { LeafletMouseEvent } from 'leaflet'
@@ -31,10 +31,14 @@ interface IBGECityResponse {
 const Register = () => {
     const [items, setItems] = useState<Item[]>([])
     const [ufs, setUfs] = useState<string[]>([])
-    const [selectedUf, setSelectedUf] = useState('')
     const [cities, setCities] = useState<string[]>([])
+    const [formData, setFormData] = useState({ name: '', email: '', whatsapp: ''})
+    const [selectedUf, setSelectedUf] = useState('')
     const [selectedCity, setSelectedCity] = useState('')
     const [selectedPosition, setSelectedPosition] = useState<[number, number]>([0, 0])
+    const [selectedItems, setSelectedItems] = useState<number[]>([])
+
+    const history = useHistory()
 
     useEffect(() => {
         getItems()
@@ -44,7 +48,6 @@ const Register = () => {
             const { latitude, longitude } = position.coords
             setSelectedPosition([latitude, longitude])
         })
-
     }, [])
 
     async function getUfs() {
@@ -67,6 +70,12 @@ const Register = () => {
         setItems(data)
     }
 
+    function handleChangeInput(event: ChangeEvent<HTMLInputElement>) {
+        const { name, value } = event.target
+
+        setFormData({ ...formData, [name]: value })
+    }
+
     function handleChangeUf(event: ChangeEvent<HTMLSelectElement>) {
         setSelectedUf(event.target.value)
         getCitiesByUF(event.target.value)
@@ -80,6 +89,36 @@ const Register = () => {
         setSelectedPosition([event.latlng.lat, event.latlng.lng])
     }
 
+    function handleClickItem(id: number) {
+        if (selectedItems.includes(id)) {
+            setSelectedItems(selectedItems.filter(selectedId => selectedId !== id))
+        } else {
+            setSelectedItems([...selectedItems, id])
+        }
+    }
+
+    async function handleSubmitForm(event: FormEvent) {
+        event.preventDefault()
+
+        const data = {
+            name: formData.name,
+            image_url: '',
+            email: formData.email,
+            whatsapp: formData.whatsapp,
+            uf: selectedUf,
+            city: selectedCity,
+            lat: selectedPosition[0],
+            lon: selectedPosition[1],
+            items_ids: selectedItems.join(',')
+        }
+
+        const response = (await api.post(`points`, data)).data
+
+        alert('Sucesso! Ponto de coleta criado.')
+
+        history.push('/')
+    }
+
     return (
         <div id="page-create-point">
             <header>
@@ -91,7 +130,7 @@ const Register = () => {
                 </Link>
             </header>
 
-            <form>
+            <form onSubmit={handleSubmitForm}>
                 <h1>Cadastro do ponto de coleta</h1>
 
                 <fieldset>
@@ -101,18 +140,18 @@ const Register = () => {
 
                     <div className="field">
                         <label htmlFor="name">Nome da entidade</label>
-                        <input id="name" type="text" name="name" />
+                        <input id="name" type="text" name="name" value={formData.name} onChange={handleChangeInput} />
                     </div>
 
                     <div className="field-group">
                         <div className="field">
                             <label htmlFor="email">E-mail</label>
-                            <input id="email" type="text" name="email" />
+                            <input id="email" type="text" name="email" value={formData.email} onChange={handleChangeInput} />
                         </div>
 
                         <div className="field">
                             <label htmlFor="whatsapp">Whatsapp</label>
-                            <input id="whatsapp" type="text" name="whatsapp" />
+                            <input id="whatsapp" type="text" name="whatsapp" value={formData.whatsapp} onChange={handleChangeInput} />
                         </div>
                     </div>
                 </fieldset>
@@ -164,8 +203,12 @@ const Register = () => {
 
                     <ul className="items-grid">
                         {items.length && items.map(item => (
-                            <li key={item.id}>
-                                <img src="" alt=""/>
+                            <li
+                                key={item.id}
+                                onClick={() => handleClickItem(item.id)}
+                                className={selectedItems.includes(item.id) ? 'selected' : ''}
+                            >
+                                <img src={item.image_url} alt={item.name} width={100} />
                                 <span>{item.name}</span>
                             </li>
                         ))}
